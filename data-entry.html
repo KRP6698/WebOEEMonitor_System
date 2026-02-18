@@ -1,0 +1,313 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>บันทึกข้อมูล OEE - WDC</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>🏭 OEE Monitoring System</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Dashboard</a></li>
+                <li><a href="data-entry.html" class="active">บันทึกข้อมูล</a></li>
+                <li><a href="analysis.html">วิเคราะห์</a></li>
+            </ul>
+        </nav>
+
+        <div class="form-section">
+            <h2>📝 บันทึกข้อมูล OEE</h2>
+            
+            <form id="oee-form">
+                <!-- Basic Info -->
+                <div class="form-group">
+                    <label for="date">วันที่ผลิต *</label>
+                    <input type="date" id="date" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="machine">เครื่องจักร *</label>
+                        <select id="machine" required>
+                            <option value="">เลือกเครื่องจักร</option>
+                            <option value="M001">Machine M001</option>
+                            <option value="M002">Machine M002</option>
+                            <option value="M003">Machine M003</option>
+                            <option value="M004">Machine M004</option>
+                            <option value="M005">Machine M005</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shift">กะ *</label>
+                        <select id="shift" required>
+                            <option value="">เลือกกะ</option>
+                            <option value="1">กะ 1 (08:00-16:00)</option>
+                            <option value="2">กะ 2 (16:00-00:00)</option>
+                            <option value="3">กะ 3 (00:00-08:00)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Time Data -->
+                <div class="form-section-title">⏰ ข้อมูลเวลา</div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="planned-time">เวลาผลิตตามแผน (นาที) *</label>
+                        <input type="number" id="planned-time" min="0" value="480" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="downtime">เวลาหยุดเครื่อง (นาที) *</label>
+                        <input type="number" id="downtime" min="0" value="0" required>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <strong>Operating Time:</strong> <span id="operating-time">480</span> นาที
+                </div>
+
+                <!-- Production Data -->
+                <div class="form-section-title">📦 ข้อมูลการผลิต</div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ideal-cycle-time">Ideal Cycle Time (วินาที/ชิ้น) *</label>
+                        <input type="number" id="ideal-cycle-time" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="total-output">จำนวนผลิตรวม (ชิ้น) *</label>
+                        <input type="number" id="total-output" min="0" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="good-parts">จำนวนชิ้นงานดี (ชิ้น) *</label>
+                        <input type="number" id="good-parts" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="defects">จำนวนชิ้นงานเสีย (ชิ้น) *</label>
+                        <input type="number" id="defects" min="0" value="0" required>
+                    </div>
+                </div>
+
+                <!-- Downtime Reasons -->
+                <div class="form-section-title">🔴 สาเหตุการหยุดเครื่อง</div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="breakdown-time">Breakdown (นาที)</label>
+                        <input type="number" id="breakdown-time" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="setup-time">Setup/Changeover (นาที)</label>
+                        <input type="number" id="setup-time" min="0" value="0">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="minor-stops">Minor Stops (นาที)</label>
+                        <input type="number" id="minor-stops" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="material-shortage">ขาดวัตถุดิบ (นาที)</label>
+                        <input type="number" id="material-shortage" min="0" value="0">
+                    </div>
+                </div>
+
+                <!-- Quality Issues -->
+                <div class="form-section-title">⚠️ ปัญหาคุณภาพ</div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startup-rejects">Startup Rejects (ชิ้น)</label>
+                        <input type="number" id="startup-rejects" min="0" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="production-rejects">Production Rejects (ชิ้น)</label>
+                        <input type="number" id="production-rejects" min="0" value="0">
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group">
+                    <label for="notes">หมายเหตุ</label>
+                    <textarea id="notes" rows="3" placeholder="บันทึกเพิ่มเติม (ถ้ามี)"></textarea>
+                </div>
+
+                <!-- Calculated Results -->
+                <div class="results-section" id="results-section" style="display:none;">
+                    <h3>📊 ผลการคำนวณ</h3>
+                    <div class="result-grid">
+                        <div class="result-item">
+                            <span class="result-label">OEE:</span>
+                            <span class="result-value" id="calc-oee">--</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Availability:</span>
+                            <span class="result-value" id="calc-availability">--</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Performance:</span>
+                            <span class="result-value" id="calc-performance">--</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Quality:</span>
+                            <span class="result-value" id="calc-quality">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="form-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="calculatePreview()">
+                        🧮 คำนวณดูก่อน
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        💾 บันทึกข้อมูล
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="resetForm()">
+                        🔄 ล้างข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/oee-calculator.js"></script>
+    <script>
+        // Set today's date
+        document.getElementById('date').valueAsDate = new Date();
+
+        // Auto-calculate operating time
+        document.getElementById('planned-time').addEventListener('input', updateOperatingTime);
+        document.getElementById('downtime').addEventListener('input', updateOperatingTime);
+
+        function updateOperatingTime() {
+            const planned = parseFloat(document.getElementById('planned-time').value) || 0;
+            const downtime = parseFloat(document.getElementById('downtime').value) || 0;
+            const operating = planned - downtime;
+            document.getElementById('operating-time').textContent = operating;
+        }
+
+        // Auto-calculate defects
+        document.getElementById('total-output').addEventListener('input', updateDefects);
+        document.getElementById('good-parts').addEventListener('input', updateDefects);
+
+        function updateDefects() {
+            const total = parseFloat(document.getElementById('total-output').value) || 0;
+            const good = parseFloat(document.getElementById('good-parts').value) || 0;
+            document.getElementById('defects').value = Math.max(0, total - good);
+        }
+
+        // Calculate preview
+        function calculatePreview() {
+            const data = getFormData();
+            const result = calculateOEE(data);
+            
+            document.getElementById('calc-oee').textContent = result.oee.toFixed(1) + '%';
+            document.getElementById('calc-availability').textContent = result.availability.toFixed(1) + '%';
+            document.getElementById('calc-performance').textContent = result.performance.toFixed(1) + '%';
+            document.getElementById('calc-quality').textContent = result.quality.toFixed(1) + '%';
+            
+            document.getElementById('results-section').style.display = 'block';
+            
+            // Add color coding
+            const oeeElement = document.getElementById('calc-oee');
+            const oeeValue = result.oee;
+            oeeElement.className = 'result-value ' + 
+                (oeeValue >= 85 ? 'status-good' : 
+                 oeeValue >= 60 ? 'status-warning' : 'status-poor');
+        }
+
+        // Form submission
+        document.getElementById('oee-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = getFormData();
+            const result = calculateOEE(data);
+            
+            try {
+                const { data: inserted, error } = await supabase
+                    .from('oee_records')
+                    .insert([{
+                        date: data.date,
+                        machine_id: data.machine,
+                        shift: data.shift,
+                        planned_production_time: data.plannedTime,
+                        downtime: data.downtime,
+                        operating_time: data.plannedTime - data.downtime,
+                        ideal_cycle_time: data.idealCycleTime,
+                        total_output: data.totalOutput,
+                        good_parts: data.goodParts,
+                        defective_parts: data.defects,
+                        oee: result.oee,
+                        availability: result.availability,
+                        performance: result.performance,
+                        quality: result.quality,
+                        breakdown_time: data.breakdownTime,
+                        setup_time: data.setupTime,
+                        minor_stops: data.minorStops,
+                        material_shortage: data.materialShortage,
+                        startup_rejects: data.startupRejects,
+                        production_rejects: data.productionRejects,
+                        notes: data.notes
+                    }]);
+
+                if (error) throw error;
+
+                alert('✅ บันทึกข้อมูลสำเร็จ!');
+                window.location.href = 'index.html';
+                
+            } catch (error) {
+                alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+            }
+        });
+
+        function getFormData() {
+            return {
+                date: document.getElementById('date').value,
+                machine: document.getElementById('machine').value,
+                shift: document.getElementById('shift').value,
+                plannedTime: parseFloat(document.getElementById('planned-time').value),
+                downtime: parseFloat(document.getElementById('downtime').value),
+                idealCycleTime: parseFloat(document.getElementById('ideal-cycle-time').value),
+                totalOutput: parseInt(document.getElementById('total-output').value),
+                goodParts: parseInt(document.getElementById('good-parts').value),
+                defects: parseInt(document.getElementById('defects').value),
+                breakdownTime: parseFloat(document.getElementById('breakdown-time').value) || 0,
+                setupTime: parseFloat(document.getElementById('setup-time').value) || 0,
+                minorStops: parseFloat(document.getElementById('minor-stops').value) || 0,
+                materialShortage: parseFloat(document.getElementById('material-shortage').value) || 0,
+                startupRejects: parseInt(document.getElementById('startup-rejects').value) || 0,
+                productionRejects: parseInt(document.getElementById('production-rejects').value) || 0,
+                notes: document.getElementById('notes').value
+            };
+        }
+
+        function resetForm() {
+            if (confirm('ต้องการล้างข้อมูลทั้งหมด?')) {
+                document.getElementById('oee-form').reset();
+                document.getElementById('date').valueAsDate = new Date();
+                document.getElementById('results-section').style.display = 'none';
+                updateOperatingTime();
+            }
+        }
+    </script>
+</body>
+</html>

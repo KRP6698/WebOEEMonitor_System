@@ -1,0 +1,1037 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>วิเคราะห์ OEE - WDC Manufacturing</title>
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- CDN Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>🏭 OEE Monitoring System</h1>
+                <span class="company">Western Digital</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Dashboard</a></li>
+                <li><a href="data-entry.html">บันทึกข้อมูล</a></li>
+                <li><a href="analysis.html" class="active">วิเคราะห์</a></li>
+            </ul>
+        </nav>
+
+        <!-- Analysis Header -->
+        <div class="analysis-header">
+            <h2>📈 การวิเคราะห์ OEE เชิงลึก</h2>
+            <p>วิเคราะห์ประสิทธิภาพและหาจุดปรับปรุง</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <label>เครื่องจักร:</label>
+                <select id="machine-filter">
+                    <option value="all">ทั้งหมด</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>ช่วงเวลา:</label>
+                <select id="date-range">
+                    <option value="week">7 วันที่แล้ว</option>
+                    <option value="month">30 วันที่แล้ว</option>
+                    <option value="quarter">90 วันที่แล้ว</option>
+                </select>
+            </div>
+            <button class="btn-refresh" onclick="refreshAnalysis()">🔄 รีเฟรช</button>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <h4>OEE เฉลี่ย</h4>
+                    <div class="stat-value" id="avg-oee">--</div>
+                    <div class="stat-change" id="oee-change">--</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-content">
+                    <h4>ระดับประสิทธิภาพ</h4>
+                    <div class="stat-value" id="performance-level">--</div>
+                    <div class="stat-desc" id="performance-desc">--</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🔴</div>
+                <div class="stat-content">
+                    <h4>Loss ที่สูงที่สุด</h4>
+                    <div class="stat-value" id="biggest-loss">--</div>
+                    <div class="stat-desc" id="loss-desc">--</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-content">
+                    <h4>ศักยภาพในการปรับปรุง</h4>
+                    <div class="stat-value" id="improvement-potential">--</div>
+                    <div class="stat-desc" id="potential-desc">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pareto Chart -->
+        <div class="analysis-section">
+            <div class="chart-full">
+                <h3>📊 Pareto Chart - Six Big Losses</h3>
+                <p class="chart-desc">แสดง Loss ที่ส่งผลกระทบมากที่สุด (Pareto 80/20 Rule)</p>
+                <canvas id="paretoChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Trend Analysis -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3>📈 OEE Trend Analysis</h3>
+                <canvas id="trendAnalysisChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3>🔄 Component Comparison</h3>
+                <canvas id="componentComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Machine Comparison -->
+        <div class="analysis-section">
+            <div class="chart-full">
+                <h3>🏭 Machine Performance Comparison</h3>
+                <p class="chart-desc">เปรียบเทียบประสิทธิภาพระหว่างเครื่องจักร</p>
+                <canvas id="machineComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Shift Analysis -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3>🕐 OEE by Shift</h3>
+                <canvas id="shiftAnalysisChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3>📉 Downtime Analysis</h3>
+                <canvas id="downtimeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Improvement Suggestions -->
+        <div class="suggestions-section">
+            <h3>💡 คำแนะนำการปรับปรุง</h3>
+            <div id="suggestions-container">
+                <p class="loading">กำลังวิเคราะห์ข้อมูล...</p>
+            </div>
+        </div>
+
+        <!-- Detailed Table -->
+        <div class="table-section">
+            <h3>📋 ข้อมูลโดยละเอียด</h3>
+            <div class="table-controls">
+                <input type="text" id="search-box" placeholder="🔍 ค้นหา...">
+                <button onclick="exportToCSV()" class="btn-export">📥 Export CSV</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="analysis-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable(0)">วันที่ ▼</th>
+                            <th onclick="sortTable(1)">เครื่อง ▼</th>
+                            <th onclick="sortTable(2)">กะ ▼</th>
+                            <th onclick="sortTable(3)">OEE % ▼</th>
+                            <th onclick="sortTable(4)">A % ▼</th>
+                            <th onclick="sortTable(5)">P % ▼</th>
+                            <th onclick="sortTable(6)">Q % ▼</th>
+                            <th>Loss หลัก</th>
+                            <th>แนะนำ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analysis-table-body">
+                        <tr><td colspan="9">กำลังโหลดข้อมูล...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/oee-calculator.js"></script>
+    <script>
+        let allRecords = [];
+        let analysisCharts = {};
+
+        // Initialize
+        async function initAnalysis() {
+            await loadRecords();
+            updateStats();
+            renderCharts();
+            updateSuggestions();
+            updateDetailedTable();
+            loadMachineFilter();
+        }
+
+        // Load records
+        async function loadRecords() {
+            try {
+                const { data, error } = await supabase
+                    .from('oee_records')
+                    .select('*')
+                    .order('date', { ascending: false });
+
+                if (error) throw error;
+                allRecords = data || [];
+                console.log('✅ โหลดข้อมูล:', allRecords.length, 'records');
+            } catch (error) {
+                console.error('❌ Error:', error);
+                alert('ไม่สามารถโหลดข้อมูลได้: ' + error.message);
+            }
+        }
+
+        // Get filtered records
+        function getFilteredRecords() {
+            let filtered = [...allRecords];
+            
+            const machine = document.getElementById('machine-filter').value;
+            if (machine && machine !== 'all') {
+                filtered = filtered.filter(r => r.machine_id === machine);
+            }
+            
+            const range = document.getElementById('date-range').value;
+            const today = new Date();
+            const cutoffDate = new Date();
+            
+            if (range === 'week') {
+                cutoffDate.setDate(today.getDate() - 7);
+            } else if (range === 'month') {
+                cutoffDate.setDate(today.getDate() - 30);
+            } else if (range === 'quarter') {
+                cutoffDate.setDate(today.getDate() - 90);
+            }
+            
+            filtered = filtered.filter(r => new Date(r.date) >= cutoffDate);
+            return filtered;
+        }
+
+        // Update stats
+        function updateStats() {
+            const filtered = getFilteredRecords();
+            
+            if (filtered.length === 0) {
+                document.getElementById('avg-oee').textContent = '--';
+                return;
+            }
+
+            // Average OEE
+            const avgOEE = filtered.reduce((sum, r) => sum + r.oee, 0) / filtered.length;
+            document.getElementById('avg-oee').textContent = avgOEE.toFixed(1) + '%';
+            
+            // Change from previous period
+            const previousRecords = getPreviousPeriodRecords();
+            if (previousRecords.length > 0) {
+                const prevAvg = previousRecords.reduce((sum, r) => sum + r.oee, 0) / previousRecords.length;
+                const change = avgOEE - prevAvg;
+                const changeEl = document.getElementById('oee-change');
+                changeEl.textContent = (change >= 0 ? '↑ ' : '↓ ') + Math.abs(change).toFixed(1) + '%';
+                changeEl.className = 'stat-change ' + (change >= 0 ? 'positive' : 'negative');
+            }
+
+            // Performance level
+            const levelEl = document.getElementById('performance-level');
+            const descEl = document.getElementById('performance-desc');
+            if (avgOEE >= 85) {
+                levelEl.textContent = 'World Class';
+                levelEl.className = 'stat-value status-good';
+                descEl.textContent = 'ยอดเยี่ยม! รักษาระดับต่อไป';
+            } else if (avgOEE >= 70) {
+                levelEl.textContent = 'Good';
+                levelEl.className = 'stat-value status-warning';
+                descEl.textContent = 'ดี แต่ยังปรับปรุงได้';
+            } else if (avgOEE >= 60) {
+                levelEl.textContent = 'Fair';
+                levelEl.className = 'stat-value status-warning';
+                descEl.textContent = 'ต้องปรับปรุงด่วน';
+            } else {
+                levelEl.textContent = 'Poor';
+                levelEl.className = 'stat-value status-poor';
+                descEl.textContent = 'ต้องปรับปรุงเร่งด่วน!';
+            }
+
+            // Biggest loss
+            const losses = calculateTotalLosses(filtered);
+            const biggestLoss = Object.entries(losses).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('biggest-loss').textContent = biggestLoss[0];
+            document.getElementById('loss-desc').textContent = biggestLoss[1].toFixed(0) + ' นาที';
+
+            // Improvement potential
+            const maxPossibleOEE = 100;
+            const potential = maxPossibleOEE - avgOEE;
+            document.getElementById('improvement-potential').textContent = '+' + potential.toFixed(1) + '%';
+            document.getElementById('potential-desc').textContent = 'สามารถปรับปรุงได้อีก';
+        }
+
+        function getPreviousPeriodRecords() {
+            const range = document.getElementById('date-range').value;
+            const today = new Date();
+            let startDate, endDate;
+            
+            if (range === 'week') {
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 14);
+                endDate = new Date(today);
+                endDate.setDate(today.getDate() - 7);
+            } else if (range === 'month') {
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 60);
+                endDate = new Date(today);
+                endDate.setDate(today.getDate() - 30);
+            } else {
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 180);
+                endDate = new Date(today);
+                endDate.setDate(today.getDate() - 90);
+            }
+            
+            return allRecords.filter(r => {
+                const date = new Date(r.date);
+                return date >= startDate && date < endDate;
+            });
+        }
+
+        function calculateTotalLosses(records) {
+            return {
+                'Breakdowns': records.reduce((sum, r) => sum + (r.breakdown_time || 0), 0),
+                'Setup/Changeover': records.reduce((sum, r) => sum + (r.setup_time || 0), 0),
+                'Minor Stops': records.reduce((sum, r) => sum + (r.minor_stops || 0), 0),
+                'Material Shortage': records.reduce((sum, r) => sum + (r.material_shortage || 0), 0),
+                'Startup Rejects': records.reduce((sum, r) => sum + (r.startup_rejects || 0), 0),
+                'Production Rejects': records.reduce((sum, r) => sum + (r.production_rejects || 0), 0)
+            };
+        }
+
+        // Render all charts
+        function renderCharts() {
+            renderParetoChart();
+            renderTrendAnalysisChart();
+            renderComponentComparisonChart();
+            renderMachineComparisonChart();
+            renderShiftAnalysisChart();
+            renderDowntimeChart();
+        }
+
+        // Pareto Chart
+        function renderParetoChart() {
+            const ctx = document.getElementById('paretoChart');
+            const filtered = getFilteredRecords();
+            const losses = calculateTotalLosses(filtered);
+            
+            const sortedLosses = Object.entries(losses)
+                .sort((a, b) => b[1] - a[1]);
+            
+            const total = sortedLosses.reduce((sum, item) => sum + item[1], 0);
+            let cumulative = 0;
+            const cumulativePercent = sortedLosses.map(item => {
+                cumulative += item[1];
+                return (cumulative / total) * 100;
+            });
+
+            if (analysisCharts.pareto) analysisCharts.pareto.destroy();
+            
+            analysisCharts.pareto = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedLosses.map(item => item[0]),
+                    datasets: [{
+                        label: 'เวลา/จำนวน',
+                        data: sortedLosses.map(item => item[1]),
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        yAxisID: 'y'
+                    }, {
+                        label: 'สะสม %',
+                        data: cumulativePercent,
+                        type: 'line',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        yAxisID: 'y1',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            position: 'left'
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            max: 100,
+                            position: 'right',
+                            ticks: {
+                                callback: value => value + '%'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Trend Analysis Chart
+        function renderTrendAnalysisChart() {
+            const ctx = document.getElementById('trendAnalysisChart');
+            const filtered = getFilteredRecords().slice(0, 30).reverse();
+
+            if (analysisCharts.trend) analysisCharts.trend.destroy();
+
+            analysisCharts.trend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: filtered.map(r => formatDate(r.date)),
+                    datasets: [{
+                        label: 'OEE %',
+                        data: filtered.map(r => r.oee),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Target (85%)',
+                        data: filtered.map(() => 85),
+                        borderColor: '#43e97b',
+                        borderDash: [5, 5],
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Component Comparison Chart
+        function renderComponentComparisonChart() {
+            const ctx = document.getElementById('componentComparisonChart');
+            const filtered = getFilteredRecords();
+
+            const avgA = filtered.reduce((sum, r) => sum + r.availability, 0) / filtered.length;
+            const avgP = filtered.reduce((sum, r) => sum + r.performance, 0) / filtered.length;
+            const avgQ = filtered.reduce((sum, r) => sum + r.quality, 0) / filtered.length;
+
+            if (analysisCharts.component) analysisCharts.component.destroy();
+
+            analysisCharts.component = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Availability', 'Performance', 'Quality'],
+                    datasets: [{
+                        label: 'ค่าเฉลี่ย',
+                        data: [avgA, avgP, avgQ],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)'
+                    }, {
+                        label: 'Target',
+                        data: [85, 85, 95],
+                        borderColor: '#43e97b',
+                        backgroundColor: 'rgba(67, 233, 123, 0.1)',
+                        borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Machine Comparison Chart
+        function renderMachineComparisonChart() {
+            const ctx = document.getElementById('machineComparisonChart');
+            const filtered = getFilteredRecords();
+
+            const machineData = {};
+            filtered.forEach(r => {
+                if (!machineData[r.machine_id]) {
+                    machineData[r.machine_id] = { oee: [], a: [], p: [], q: [] };
+                }
+                machineData[r.machine_id].oee.push(r.oee);
+                machineData[r.machine_id].a.push(r.availability);
+                machineData[r.machine_id].p.push(r.performance);
+                machineData[r.machine_id].q.push(r.quality);
+            });
+
+            const machines = Object.keys(machineData);
+            const avgOEE = machines.map(m => 
+                machineData[m].oee.reduce((sum, v) => sum + v, 0) / machineData[m].oee.length
+            );
+
+            if (analysisCharts.machine) analysisCharts.machine.destroy();
+
+            analysisCharts.machine = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: machines,
+                    datasets: [{
+                        label: 'OEE %',
+                        data: avgOEE,
+                        backgroundColor: avgOEE.map(v =>
+                            v >= 85 ? 'rgba(67, 233, 123, 0.7)' :
+                            v >= 70 ? 'rgba(254, 202, 87, 0.7)' :
+                            'rgba(255, 107, 107, 0.7)'
+                        )
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Shift Analysis Chart
+        function renderShiftAnalysisChart() {
+            const ctx = document.getElementById('shiftAnalysisChart');
+            const filtered = getFilteredRecords();
+
+            const shiftData = { 1: [], 2: [], 3: [] };
+            filtered.forEach(r => {
+                if (shiftData[r.shift]) {
+                    shiftData[r.shift].push(r.oee);
+                }
+            });
+
+            const avgByShift = Object.keys(shiftData).map(shift => 
+                shiftData[shift].length > 0 
+                    ? shiftData[shift].reduce((sum, v) => sum + v, 0) / shiftData[shift].length 
+                    : 0
+            );
+
+            if (analysisCharts.shift) analysisCharts.shift.destroy();
+
+            analysisCharts.shift = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['กะ 1', 'กะ 2', 'กะ 3'],
+                    datasets: [{
+                        data: avgByShift,
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.7)',
+                            'rgba(255, 152, 0, 0.7)',
+                            'rgba(156, 39, 176, 0.7)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Downtime Chart
+        function renderDowntimeChart() {
+            const ctx = document.getElementById('downtimeChart');
+            const filtered = getFilteredRecords();
+
+            const totalDowntime = filtered.reduce((sum, r) => sum + r.downtime, 0);
+            const totalBreakdown = filtered.reduce((sum, r) => sum + (r.breakdown_time || 0), 0);
+            const totalSetup = filtered.reduce((sum, r) => sum + (r.setup_time || 0), 0);
+            const totalMinorStops = filtered.reduce((sum, r) => sum + (r.minor_stops || 0), 0);
+
+            if (analysisCharts.downtime) analysisCharts.downtime.destroy();
+
+            analysisCharts.downtime = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Breakdown', 'Setup', 'Minor Stops', 'อื่นๆ'],
+                    datasets: [{
+                        data: [
+                            totalBreakdown,
+                            totalSetup,
+                            totalMinorStops,
+                            totalDowntime - totalBreakdown - totalSetup - totalMinorStops
+                        ],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(153, 102, 255, 0.7)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Update suggestions
+        function updateSuggestions() {
+            const filtered = getFilteredRecords();
+            if (filtered.length === 0) return;
+
+            const avgOEE = filtered.reduce((sum, r) => sum + r.oee, 0) / filtered.length;
+            const avgA = filtered.reduce((sum, r) => sum + r.availability, 0) / filtered.length;
+            const avgP = filtered.reduce((sum, r) => sum + r.performance, 0) / filtered.length;
+            const avgQ = filtered.reduce((sum, r) => sum + r.quality, 0) / filtered.length;
+
+            const suggestions = [];
+
+            if (avgA < 85) {
+                suggestions.push({
+                    title: '🔧 ปรับปรุง Availability',
+                    current: avgA.toFixed(1) + '%',
+                    target: '85%',
+                    actions: [
+                        'ทำ Preventive Maintenance ตามกำหนดการ',
+                        'วิเคราะห์สาเหตุการเสียซ้ำๆ (Breakdown Analysis)',
+                        'ลดเวลา Changeover ด้วย SMED',
+                        'เพิ่มอะไหล่สำรอง (Critical Spares)'
+                    ]
+                });
+            }
+
+            if (avgP < 85) {
+                suggestions.push({
+                    title: '⚡ ปรับปรุง Performance',
+                    current: avgP.toFixed(1) + '%',
+                    target: '85%',
+                    actions: [
+                        'วิเคราะห์และลด Minor Stops',
+                        'Optimize machine parameters',
+                        'ฝึกอบรม operators ให้มีทักษะมากขึ้น',
+                        'ปรับปรุงวัสดุและ tooling'
+                    ]
+                });
+            }
+
+            if (avgQ < 95) {
+                suggestions.push({
+                    title: '✓ ปรับปรุง Quality',
+                    current: avgQ.toFixed(1) + '%',
+                    target: '95%',
+                    actions: [
+                        'ทำ First Piece Inspection ทุกครั้ง',
+                        'ตรวจสอบ Process Parameters',
+                        'ใช้ Poka-Yoke (Error Proofing)',
+                        'ทำ Root Cause Analysis สำหรับ defects'
+                    ]
+                });
+            }
+
+            const container = document.getElementById('suggestions-container');
+            if (suggestions.length === 0) {
+                container.innerHTML = `
+                    <div class="suggestion-card success">
+                        <h4>🎉 ยอดเยี่ยม!</h4>
+                        <p>ทุก Component อยู่ในระดับ World Class แล้ว</p>
+                        <p>รักษาระดับนี้ต่อไปและหาจุดปรับปรุงแบบ Continuous Improvement</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = suggestions.map(s => `
+                    <div class="suggestion-card">
+                        <h4>${s.title}</h4>
+                        <div class="suggestion-stats">
+                            <span>ปัจจุบัน: <strong>${s.current}</strong></span>
+                            <span>เป้าหมาย: <strong class="target">${s.target}</strong></span>
+                        </div>
+                        <ul class="action-list">
+                            ${s.actions.map(action => `<li>${action}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Update detailed table
+        function updateDetailedTable() {
+            const filtered = getFilteredRecords();
+            const tbody = document.getElementById('analysis-table-body');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9">ไม่มีข้อมูล</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(r => {
+                const losses = [
+                    { name: 'Breakdown', value: r.breakdown_time || 0 },
+                    { name: 'Setup', value: r.setup_time || 0 },
+                    { name: 'Minor Stops', value: r.minor_stops || 0 }
+                ].sort((a, b) => b.value - a.value);
+
+                const mainLoss = losses[0];
+                const recommendation = getRecommendation(r);
+
+                return `
+                    <tr class="${getOEEStatus(r.oee)}">
+                        <td>${formatDate(r.date)}</td>
+                        <td>${r.machine_id}</td>
+                        <td>กะ ${r.shift}</td>
+                        <td><strong>${r.oee.toFixed(1)}%</strong></td>
+                        <td>${r.availability.toFixed(1)}%</td>
+                        <td>${r.performance.toFixed(1)}%</td>
+                        <td>${r.quality.toFixed(1)}%</td>
+                        <td>${mainLoss.name} (${mainLoss.value}นาที)</td>
+                        <td class="recommendation">${recommendation}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getRecommendation(record) {
+            if (record.oee >= 85) return '✅ ดีเยี่ยม';
+            if (record.availability < 85) return '🔧 ลด Downtime';
+            if (record.performance < 85) return '⚡ เพิ่ม Speed';
+            if (record.quality < 95) return '✓ ปรับปรุง Quality';
+            return '📊 ติดตามต่อเนื่อง';
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            const filtered = getFilteredRecords();
+            let csv = 'วันที่,เครื่องจักร,กะ,OEE%,A%,P%,Q%,Downtime,Total Output,Good Parts\n';
+            
+            filtered.forEach(r => {
+                csv += `${r.date},${r.machine_id},${r.shift},${r.oee},${r.availability},${r.performance},${r.quality},${r.downtime},${r.total_output},${r.good_parts}\n`;
+            });
+
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `OEE_Analysis_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        // Sort table
+        let sortDirection = {};
+        function sortTable(columnIndex) {
+            const table = document.getElementById('analysis-table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            const direction = sortDirection[columnIndex] === 'asc' ? 'desc' : 'asc';
+            sortDirection[columnIndex] = direction;
+
+            rows.sort((a, b) => {
+                const aVal = a.cells[columnIndex].textContent;
+                const bVal = b.cells[columnIndex].textContent;
+                
+                if (direction === 'asc') {
+                    return aVal > bVal ? 1 : -1;
+                } else {
+                    return aVal < bVal ? 1 : -1;
+                }
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Search functionality
+        document.getElementById('search-box')?.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#analysis-table tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        // Refresh
+        async function refreshAnalysis() {
+            document.querySelector('.btn-refresh').textContent = '⏳ กำลังโหลด...';
+            await loadRecords();
+            updateStats();
+            renderCharts();
+            updateSuggestions();
+            updateDetailedTable();
+            document.querySelector('.btn-refresh').textContent = '🔄 รีเฟรช';
+        }
+
+        // Load machine filter
+        function loadMachineFilter() {
+            const select = document.getElementById('machine-filter');
+            const machines = [...new Set(allRecords.map(r => r.machine_id))];
+            
+            machines.forEach(machine => {
+                const option = document.createElement('option');
+                option.value = machine;
+                option.textContent = machine;
+                select.appendChild(option);
+            });
+        }
+
+        // Event listeners
+        document.getElementById('machine-filter').addEventListener('change', () => {
+            updateStats();
+            renderCharts();
+            updateSuggestions();
+            updateDetailedTable();
+        });
+
+        document.getElementById('date-range').addEventListener('change', () => {
+            updateStats();
+            renderCharts();
+            updateSuggestions();
+            updateDetailedTable();
+        });
+
+        // Initialize
+        initAnalysis();
+    </script>
+
+    <style>
+        /* Additional styles for analysis page */
+        .analysis-header {
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .analysis-header h2 {
+            margin-bottom: 10px;
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stat-icon {
+            font-size: 36px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+        }
+
+        .stat-content h4 {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-change {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .stat-change.positive {
+            color: #43e97b;
+        }
+
+        .stat-change.negative {
+            color: #ff4757;
+        }
+
+        .stat-desc {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .analysis-section {
+            padding: 30px;
+        }
+
+        .chart-full {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .chart-full canvas {
+            height: 400px !important;
+        }
+
+        .chart-desc {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .suggestions-section {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .suggestions-section h3 {
+            margin-bottom: 20px;
+        }
+
+        #suggestions-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .suggestion-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .suggestion-card.success {
+            border-left-color: #43e97b;
+            background: linear-gradient(135deg, #43e97b20 0%, #38f9d720 100%);
+        }
+
+        .suggestion-card h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .suggestion-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .suggestion-stats .target {
+            color: #43e97b;
+        }
+
+        .action-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .action-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .action-list li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+
+        #search-box {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .btn-export {
+            padding: 10px 20px;
+            background: #43e97b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-export:hover {
+            background: #38d66b;
+            transform: translateY(-2px);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table th {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        table th:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .recommendation {
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+    </style>
+</body>
+</html>

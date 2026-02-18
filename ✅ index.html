@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OEE Dashboard - WDC Manufacturing</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>🏭 OEE Monitoring System</h1>
+                <span class="company">Western Digital</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="active">Dashboard</a></li>
+                <li><a href="data-entry.html">บันทึกข้อมูล</a></li>
+                <li><a href="analysis.html">วิเคราะห์</a></li>
+            </ul>
+        </nav>
+
+        <!-- KPI Cards -->
+        <div class="kpi-section">
+            <div class="kpi-card oee">
+                <div class="kpi-icon">📊</div>
+                <div class="kpi-content">
+                    <h3>OEE</h3>
+                    <div class="kpi-value" id="oee-value">--</div>
+                    <div class="kpi-status" id="oee-status">กำลังโหลด...</div>
+                </div>
+            </div>
+
+            <div class="kpi-card availability">
+                <div class="kpi-icon">⏰</div>
+                <div class="kpi-content">
+                    <h3>Availability</h3>
+                    <div class="kpi-value" id="availability-value">--</div>
+                    <div class="kpi-trend" id="availability-trend">--</div>
+                </div>
+            </div>
+
+            <div class="kpi-card performance">
+                <div class="kpi-icon">⚡</div>
+                <div class="kpi-content">
+                    <h3>Performance</h3>
+                    <div class="kpi-value" id="performance-value">--</div>
+                    <div class="kpi-trend" id="performance-trend">--</div>
+                </div>
+            </div>
+
+            <div class="kpi-card quality">
+                <div class="kpi-icon">✓</div>
+                <div class="kpi-content">
+                    <h3>Quality</h3>
+                    <div class="kpi-value" id="quality-value">--</div>
+                    <div class="kpi-trend" id="quality-trend">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <label>เครื่องจักร:</label>
+                <select id="machine-filter">
+                    <option value="all">ทั้งหมด</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>ช่วงเวลา:</label>
+                <select id="date-range">
+                    <option value="today">วันนี้</option>
+                    <option value="week">7 วันที่แล้ว</option>
+                    <option value="month">30 วันที่แล้ว</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>กะ:</label>
+                <select id="shift-filter">
+                    <option value="all">ทุกกะ</option>
+                    <option value="1">กะ 1</option>
+                    <option value="2">กะ 2</option>
+                    <option value="3">กะ 3</option>
+                </select>
+            </div>
+            <button class="btn-refresh" onclick="refreshData()">🔄 รีเฟรช</button>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3>📈 OEE Trend (7 วันล่าสุด)</h3>
+                <canvas id="trendChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3>📊 OEE Components</h3>
+                <canvas id="componentsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3>🔴 Six Big Losses</h3>
+                <canvas id="lossesChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3>🏭 OEE by Machine</h3>
+                <canvas id="machineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Recent Records -->
+        <div class="table-section">
+            <h3>📋 บันทึกล่าสุด</h3>
+            <table id="recent-records">
+                <thead>
+                    <tr>
+                        <th>วันที่</th>
+                        <th>เครื่องจักร</th>
+                        <th>กะ</th>
+                        <th>OEE</th>
+                        <th>A%</th>
+                        <th>P%</th>
+                        <th>Q%</th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
+                <tbody id="records-body">
+                    <tr><td colspan="8">กำลังโหลดข้อมูล...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/oee-calculator.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
