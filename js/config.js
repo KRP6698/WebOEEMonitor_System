@@ -3,7 +3,7 @@
 
 // Supabase Configuration
 const SUPABASE_URL = 'https://nnayrboqnttzmvlfmseq.supabase.co'; // เปลี่ยนเป็นของคุณ
-const SUPABASE_KEY = 'sb_publishable_0go3_BapOy02XqbLl2kSsw_r6PiACCU'; // เปลี่ยนเป็นของคุณ
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZHJmd3JkanFwdWRpcnlxd2lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzOTY4ODQsImV4cCI6MjA4Njk3Mjg4NH0.6grAw_r6Lhe_aTC7FQAzll23vV7a--MOMostTPzvRxI'; // เปลี่ยนเป็นของคุณ
 
 // ✅ สร้าง Supabase client
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
